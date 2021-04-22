@@ -1,0 +1,262 @@
+---
+title: "Untitled"
+author: "Stefan Haußner"
+date: "27 1 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(osmdata) # package for working with streets
+library(showtext) # for custom fonts
+library(ggmap)
+library(rvest)
+library(ggthemes)
+library(sf)
+library(extrafont)
+```
+
+
+```{r}
+getbb("Wuppertal, Germany")
+```
+
+
+```{r}
+big_streets <- getbb("Wuppertal, Germany") %>%
+  opq()%>%
+  add_osm_feature(key = "highway", 
+                  value = c("motorway", "primary", "motorway_link", "primary_link")) %>%
+  osmdata_sf()
+
+big_streets
+
+#View(big_streets[["osm_lines"]])
+```
+
+```{r}
+med_streets <- getbb("Wuppertal, Germany")%>%
+  opq()%>%
+  add_osm_feature(key = "highway", 
+                  value = c("secondary", "tertiary", "secondary_link", "tertiary_link")) %>%
+  osmdata_sf()
+
+
+small_streets <- getbb("Wuppertal, Germany")%>%
+  opq()%>%
+  add_osm_feature(key = "highway", 
+                  value = c("residential", "living_street",
+                            "unclassified",
+                            "service", "footway"
+                  )) %>%
+  osmdata_sf()
+```
+
+```{r}
+river <- getbb("Wuppertal, Germany")%>%
+  opq()%>%
+  add_osm_feature(key = "waterway", value = "river") %>%
+  osmdata_sf()
+
+railway <- getbb("Wuppertal, Germany")%>%
+  opq()%>%
+  add_osm_feature(key = "railway", value="rail") %>%
+  osmdata_sf()
+```
+
+```{r}
+write_rds(big_streets, file = "../data/big_streets.Rdata")
+write_rds(railway, file = "../data/railway.Rdata")
+write_rds(river, file = "../data/river.Rdata")
+```
+
+```{r}
+bayreuther <- small_streets[["osm_lines"]] %>% 
+  filter(grepl(name, pattern = "Bayreuther StraÃŸe"))
+```
+
+
+```{r}
+ggplot() +
+  geom_sf(data = river$osm_lines,
+          inherit.aes = FALSE,
+          color = "blue",
+          size = .8,
+          alpha = .3) +
+  geom_sf(data = railway$osm_lines,
+          inherit.aes = FALSE,
+          color = "black",
+          size = .2,
+          linetype="dotdash",
+          alpha = .5) +
+  geom_sf(data = med_streets$osm_lines,
+          inherit.aes = FALSE,
+          color = "black",
+          size = .3,
+          alpha = .5) +
+  geom_sf(data = small_streets$osm_lines,
+          inherit.aes = FALSE,
+          color = "#666666",
+          size = .2,
+          alpha = .3) +
+  geom_sf(data = big_streets$osm_lines,
+          inherit.aes = FALSE,
+          color = "black",
+          size = .5,
+          alpha = .6)+
+  geom_sf(data = bayreuther,
+          inherit.aes = FALSE,
+          color = "orange",
+          size = 1,
+          alpha = 1) #+
+  coord_sf(xlim = c(7.0, 7.4), 
+           ylim = c(51.24, 51.32),
+           expand = FALSE)#+
+  theme_void()+
+  theme(plot.title = element_text(size = 20, face="bold", hjust=.5),
+        plot.subtitle = element_text(size = 8, hjust=.5, margin=margin(2, 0, 5, 0))) #+
+  labs(title = "WUPPERTAL", subtitle = "51.26212°N / 7.129968°E")
+  
+```
+
+# Overath
+
+```{r}
+getbb("Rheinisch-Bergischer Kreis")
+```
+
+
+```{r}
+big_streets <- getbb("Vilkerath, Germany")%>%
+  opq()%>%
+  add_osm_feature(key = "highway", 
+                  value = c("motorway", "primary", "motorway_link", "primary_link")) %>%
+  osmdata_sf()
+
+big_streets
+
+#View(big_streets[["osm_lines"]])
+```
+
+```{r}
+med_streets <- getbb("Vilkerath, Germany")%>%
+  opq()%>%
+  add_osm_feature(key = "highway", 
+                  value = c("secondary", "tertiary", "secondary_link", "tertiary_link")) %>%
+  osmdata_sf()
+
+
+small_streets <- getbb("Vilkerath, Germany")%>%
+  opq()%>%
+  add_osm_feature(key = "highway", 
+                  value = c("residential", "living_street",
+                            "unclassified",
+                            "service", "footway"
+                  )) %>%
+  osmdata_sf()
+```
+
+```{r}
+river <- getbb("Vilkerath, Germany")%>%
+  opq()%>%
+  add_osm_feature(key = "waterway", value = "river") %>%
+  osmdata_sf()
+
+railway <- getbb("Vilkerath, Germany")%>%
+  opq()%>%
+  add_osm_feature(key = "railway", value="rail") %>%
+  osmdata_sf()
+
+stream <- getbb("Vilkerath, Germany")%>%
+  opq() %>%
+  add_osm_feature(key = "name", value="Ehreshovener", value_exact = FALSE) %>%
+  osmdata_sf()
+
+stream$osm_polygons
+```
+ 
+```{r}
+available_features()
+available_tags("water")
+```
+
+
+
+```{r}
+kreuzgarten4 <- getbb("Vilkerath, Germany")%>%
+  opq()%>%
+  add_osm_feature(key = "addr:street", value = "Kreuzgarten") %>% 
+  add_osm_feature(key = "addr:housenumber", value = 4) %>% 
+  osmdata_sf()
+
+poi <- kreuzgarten4$osm_polygons %>% tibble() %>% pull(geometry)
+
+gg_poi <- poi$`259782712` %>% unlist() %>% matrix(ncol = 2) %>% as_tibble() %>% rename(lon = V1, lat = V2) %>% 
+  summarise_all(mean)
+
+
+lon_upper <- pull(gg_poi, lon) + 0.022
+lon_lower <- pull(gg_poi, lon) - 0.022
+lat_upper <- pull(gg_poi, lat) + 0.02
+lat_lower <- pull(gg_poi, lat) - 0.02
+```
+
+
+
+```{r}
+ggplot() +
+  geom_sf(data = river$osm_lines,
+          inherit.aes = FALSE,
+          color = "deepskyblue",
+          size = 1.2,
+          alpha = .7) +
+  geom_sf(data = stream$osm_polygons,
+          inherit.aes = FALSE,
+          color = rgb(1,1,1),
+          fill = "deepskyblue",
+          alpha = .7) + 
+  geom_sf(data = railway$osm_lines,
+          inherit.aes = FALSE,
+          color = "seagreen4",
+          size = 0.7,
+          linetype="dotdash",
+          alpha = .8) +
+  geom_sf(data = med_streets$osm_lines,
+          inherit.aes = FALSE,
+          color = "deeppink",
+          size = .7,
+          alpha = .7) +
+  geom_sf(data = small_streets$osm_lines,
+          inherit.aes = FALSE,
+          color = "deeppink",
+          size = .5,
+          alpha = .3) +
+  geom_sf(data = big_streets$osm_lines,
+          inherit.aes = FALSE,
+          color = "deeppink",
+          size = 1,
+          alpha = 1)+
+  geom_text(data = gg_poi,
+            aes(x = lon, y = lat), 
+            label="★", 
+            size=10, 
+            family = "sans",
+            color = "gold3")+
+  coord_sf(xlim = c(lon_lower, lon_upper), 
+           ylim = c(lat_lower, lat_upper),
+           expand = FALSE)+
+  theme_void()+
+  theme(plot.title = element_text(family = "sans", size = 30, face="bold", hjust=.5, color ="gold3"),
+        plot.subtitle = element_text(size = 18, hjust=.5, margin=margin(2, 0, 5, 0), color = "gold3"),
+        panel.background=element_rect(fill = rgb(1,1,1)),
+        panel.border = element_rect(color = "gold3", size = 4, fill = NA),
+        plot.margin=unit(c(1,1,1,1),"cm")) +
+  labs(title = "Kreuzgarten 4", subtitle = paste0(round(pull(gg_poi, lat),6),"°N / ", round(pull(gg_poi, lon),6),"°E"))
+
+ggsave("sarah_karte.png", dpi = 600, height = 297, width = 210, units = "mm")  
+```
+
